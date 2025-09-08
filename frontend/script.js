@@ -24,7 +24,7 @@ async function analyzeResume() {
     displayResults(data);
 
   } catch (err) {
-    document.getElementById("results").innerHTML = "<p>⚠️ Error analyzing resume.</p>";
+    document.getElementById("results").innerHTML = "<p>Error analyzing resume.</p>";
   }
 }
 
@@ -33,12 +33,12 @@ function displayResults(data) {
   resultsDiv.innerHTML = "";
 
   if (data.error) {
-    resultsDiv.innerHTML = `<p>⚠️ ${data.error}</p>`;
+    resultsDiv.innerHTML = `<p>${data.error}</p>`;
     return;
   }
 
   if (data.resume_skills && data.resume_skills.length > 0) {
-    resultsDiv.innerHTML += `<h3>✅ Skills Found:</h3><ul>` +
+    resultsDiv.innerHTML += `<h3>Skills Found:</h3><ul>` +
       data.resume_skills.map(skill => `<li>${skill}</li>`).join("") +
       `</ul>`;
   } else {
@@ -46,7 +46,7 @@ function displayResults(data) {
   }
 
   if (data.missing_skills && data.missing_skills.length > 0) {
-    resultsDiv.innerHTML += `<h3>📌 Suggested Skills to Learn:</h3><ul>` +
+    resultsDiv.innerHTML += `<h3>Suggested Skills to Learn:</h3><ul>` +
       data.missing_skills.map(
         item => `<li>${item.skill} → ${item.resources.map(
           r => `<a href="${r}" target="_blank">Learn</a>`
@@ -54,6 +54,6 @@ function displayResults(data) {
       ).join("") +
       `</ul>`;
   } else {
-    resultsDiv.innerHTML += `<p>🎉 You already have most in-demand skills!</p>`;
+    resultsDiv.innerHTML += `<p>You already have most in-demand skills!</p>`;
   }
 }

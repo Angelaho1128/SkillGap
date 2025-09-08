@@ -7,10 +7,9 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# ✅ Configure Gemini API
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-model = genai.GenerativeModel("gemini-1.5-flash")  # good for speed/cost
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 def extract_text_from_pdf(file):
     reader = PyPDF2.PdfReader(file)
