@@ -1,21 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Skill Gap Matcher (AI)</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Gap Matcher (AI)</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: "Inter", sans-serif;
+            background: #f5f6fa;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            text-align: center;
+        }
+    </style>
 </head>
-<body>
-  <div class="container">
-    <h1>SkillGap</h1>
-    <p>Upload your resume (PDF) or paste your text below:</p>
+<body class="flex items-center justify-center min-h-screen p-4">
 
-    <input type="file" id="resumeFile" accept="application/pdf"><br><br>
-    <textarea id="resumeInput" placeholder="Paste resume text here..."></textarea><br>
-    <button onclick="analyzeResume()">Analyze</button>
+    <div class="container bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+        <h1 class="text-3xl font-bold mb-4 text-gray-800">SkillGap Matcher</h1>
+        <p class="text-gray-600 mb-6">Upload your resume (PDF) or paste your text below to get AI-powered feedback.</p>
 
-    <div id="results"></div>
-  </div>
-  <script src="script.js"></script>
+        <div class="flex flex-col md:flex-row gap-4 mb-6">
+            <input type="file" id="resumeFile" accept="application/pdf" class="flex-1 text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-blue-50 file:text-blue-700
+                hover:file:bg-blue-100 cursor-pointer">
+            <button onclick="clearInput()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-full font-medium shadow-sm hover:bg-gray-300 transition duration-150 ease-in-out">Clear</button>
+        </div>
+
+        <textarea id="resumeInput" placeholder="Or paste resume text here..." rows="10" class="w-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 mb-6 transition duration-200 ease-in-out"></textarea>
+
+        <button onclick="analyzeResume()" id="analyzeButton" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition transform hover:scale-105 duration-200 ease-in-out">
+            Analyze Resume
+        </button>
+
+        <div id="results" class="mt-8 text-left">
+            <!-- Results will be displayed here -->
+            <p class="text-gray-500 text-center">Your analysis will appear here after you click "Analyze".</p>
+        </div>
+    </div>
+
+    <script>
+        function clearInput() {
+            document.getElementById("resumeFile").value = null;
+            document.getElementById("resumeInput").value = "";
+            document.getElementById("results").innerHTML = '<p class="text-gray-500 text-center">Your analysis will appear here after you click "Analyze".</p>';
+        }
+
+        async function analyzeResume() {
+            const resumeFile = document.getElementById("resumeFile").files[0];
+            const resumeText = document.getElementById("resumeInput").value.trim();
+            const outputDiv = document.getElementById("results");
+            const analyzeButton = document.getElementById("analyzeButton");
+
+            // Validate input
+            if (!resumeFile && !resumeText) {
+                outputDiv.innerHTML = '<p class="text-red-500 text-center">⚠️ Please upload a resume or paste text.</p>';
+                return;
+            }
+
+            // Set loading state
+            outputDiv.innerHTML = '<p class="text-blue-500 text-center animate-pulse">⏳ Analyzing resume...</p>';
+            analyzeButton.disabled = true;
+            analyzeButton.textContent = "Analyzing...";
+
+            try {
+                let response;
+
+                // Determine whether to send a file or text
+                if (resumeFile) {
+                    const formData = new FormData();
+                    formData.append("resume", resumeFile);
+                    response = await fetch("http://127.0.0.1:5000/analyze", {
+                        method: "POST",
+                        body: formData
+                    });
+                } else {
+                    response = await fetch("http://127.0.0.1:5000/analyze", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ text: resumeText })
+                    });
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Server returned ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("✅ Backend returned:", data);
+
+                let html = "";
+                if (data.detected_skills?.length) {
+                    html += `<h3 class="text-xl font-semibold mt-6 mb-2 text-gray-700">✅ Detected Skills:</h3>
+                            <ul class="list-disc list-inside space-y-1 text-gray-600">
+                                ${data.detected_skills.map(s => `<li>${s}</li>`).join("")}
+                            </ul>`;
+                }
+
+                if (data.missing_skills?.length) {
+                    html += `<h3 class="text-xl font-semibold mt-6 mb-2 text-gray-700">💡 Missing Skills Suggestions:</h3>
+                            <ul class="list-disc list-inside space-y-1 text-gray-600">
+                                ${data.missing_skills.map(s => `<li>${s}</li>`).join("")}
+                            </ul>`;
+                }
+
+                if (data.resources?.length) {
+                    html += `<h3 class="text-xl font-semibold mt-6 mb-2 text-gray-700">📚 Learning Resources:</h3>
+                            <ul class="list-disc list-inside space-y-1 text-blue-600">
+                                ${data.resources.map(r => `<li>${r.skill}: <a href="${r.resource}" target="_blank" class="hover:underline">${r.resource}</a></li>`).join("")}
+                            </ul>`;
+                }
+
+                if (!html) {
+                    html = '<p class="text-gray-500 text-center">No relevant skills were detected in the resume text.</p>';
+                }
+
+                outputDiv.innerHTML = html;
+
+            } catch (err) {
+                console.error("❌ Error analyzing resume:", err);
+                outputDiv.innerHTML = `<p class="text-red-500 text-center">❌ Error analyzing resume: ${err.message}</p>`;
+            } finally {
+                analyzeButton.disabled = false;
+                analyzeButton.textContent = "Analyze Resume";
+            }
+        }
+    </script>
 </body>
 </html>

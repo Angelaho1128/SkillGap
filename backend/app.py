@@ -1,37 +1,80 @@
 import os
 import PyPDF2
-import google.generativeai as genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import google.generativeai as genai
+import google.ai.generativelanguage as glm
+import json
 
 app = Flask(__name__)
 CORS(app)
 
+# Configure the Gemini API with the environment variable
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-model = genai.GenerativeModel("gemini-2.5-flash")
+# Use a model that supports structured output
+model = genai.GenerativeModel("gemini-1.5-flash-latest")
+
+# Define the schema for the desired JSON output
+response_schema = glm.Schema(
+    type=glm.Type.ARRAY,
+    items=glm.Schema(
+        type=glm.Type.OBJECT,
+        properties={
+            "detected_skills": glm.Schema(
+                type=glm.Type.ARRAY,
+                items=glm.Schema(type=glm.Type.STRING),
+                description="List of skills detected in the resume text."
+            ),
+            "missing_skills": glm.Schema(
+                type=glm.Type.ARRAY,
+                items=glm.Schema(type=glm.Type.STRING),
+                description="List of suggested skills that are missing from the resume."
+            ),
+            "resources": glm.Schema(
+                type=glm.Type.ARRAY,
+                items=glm.Schema(
+                    type=glm.Type.OBJECT,
+                    properties={
+                        "skill": glm.Schema(type=glm.Type.STRING),
+                        "resource": glm.Schema(type=glm.Type.STRING)
+                    }
+                ),
+                description="List of resources to learn the missing skills."
+            )
+        },
+    )
+)
 
 def extract_text_from_pdf(file):
-    reader = PyPDF2.PdfReader(file)
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text() or ""
-    return text
+    """
+    Extracts text from a PDF file.
+    """
+    try:
+        reader = PyPDF2.PdfReader(file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() or ""
+        return text
+    except Exception as e:
+        print(f"Error reading PDF: {e}")
+        return ""
 
 @app.route("/analyze", methods=["POST"])
 def analyze_resume():
     print("✅ /analyze endpoint called")
     try:
-        # --- Get resume text ---
-        if "resume" in request.files:
+        text = ""
+        if "resume" in request.files and request.files["resume"].filename:
             file = request.files["resume"]
             text = extract_text_from_pdf(file)
         else:
-            data = request.get_json()
-            text = data.get("text", "")
+            data = request.get_json(silent=True)
+            if data and "text" in data:
+                text = data["text"]
 
         print("📄 Extracted resume text:")
-        print(text[:500])  # show first 500 chars
+        print(text[:500])
 
         if not text.strip():
             return jsonify({
@@ -40,65 +83,43 @@ def analyze_resume():
                 "resources": []
             })
 
-        # --- Prompt for Gemini ---
+        # The prompt is now simpler because the schema handles the output format.
         prompt = f"""
         You are a career coach AI. Analyze the following resume text.
-
-        Rules:
-        - Return ONLY valid JSON.
-        - If no skills found, return empty lists.
-        - JSON structure:
-        {{
-          "detected_skills": ["skill1", "skill2"],
-          "missing_skills": ["skill3", "skill4"],
-          "resources": [
-            {{"skill": "skill3", "resource": "https://example.com"}}
-          ]
-        }}
+        Based on the content, identify key skills, suggest a few missing skills, and provide a single resource URL for each missing skill.
 
         Resume text:
         {text}
         """
 
-        response = model.generate_content(prompt)
-
-        print("🔥 Gemini raw response:")
-        print(response.text)  # debug output
+        # Call the model with the structured response schema
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                response_mime_type="application/json",
+                response_schema=response_schema
+            )
+        )
 
         raw_output = response.text.strip()
+        print("🔥 Gemini raw response:")
+        print(raw_output)
 
-        # --- Try parsing as JSON ---
-        import json, re
-        analysis = None
-        try:
-            analysis = json.loads(raw_output)
-        except:
-            match = re.search(r"\{.*\}", raw_output, re.S)
-            if match:
-                try:
-                    analysis = json.loads(match.group(0))
-                except:
-                    pass
+        # The response is guaranteed to be valid JSON, so no fragile parsing is needed.
+        analysis = json.loads(raw_output)
 
-        # --- If parsing still fails, return raw output safely ---
-        if not analysis:
-            analysis = {
-                "detected_skills": [],
-                "missing_skills": [],
-                "resources": [],
-                "raw_output": raw_output
-            }
-
-        return jsonify(analysis)
+        # The API returns a list, so we take the first item
+        return jsonify(analysis[0])
 
     except Exception as e:
-        # Never crash — always return valid JSON
+        # Never crash — always return valid JSON with an error message
+        print(f"❌ Exception occurred: {e}")
         return jsonify({
             "detected_skills": [],
             "missing_skills": [],
             "resources": [],
             "error": str(e)
-        })
+        }), 500
 
 
 if __name__ == "__main__":
