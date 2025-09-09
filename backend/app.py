@@ -20,7 +20,9 @@ def extract_text_from_pdf(file):
 
 @app.route("/analyze", methods=["POST"])
 def analyze_resume():
+    print("✅ /analyze endpoint called")
     try:
+        # --- Get resume text ---
         if "resume" in request.files:
             file = request.files["resume"]
             text = extract_text_from_pdf(file)
@@ -28,22 +30,76 @@ def analyze_resume():
             data = request.get_json()
             text = data.get("text", "")
 
-        if not text.strip():
-            return jsonify({"error": "No resume text provided"}), 400
+        print("📄 Extracted resume text:")
+        print(text[:500])  # show first 500 chars
 
+        if not text.strip():
+            return jsonify({
+                "detected_skills": [],
+                "missing_skills": [],
+                "resources": []
+            })
+
+        # --- Prompt for Gemini ---
         prompt = f"""
-        Analyze this resume text and identify missing skills compared to typical industry requirements.
-        Suggest online resources (Coursera, YouTube, free courses) to help the candidate improve.
-        Resume:
+        You are a career coach AI. Analyze the following resume text.
+
+        Rules:
+        - Return ONLY valid JSON.
+        - If no skills found, return empty lists.
+        - JSON structure:
+        {{
+          "detected_skills": ["skill1", "skill2"],
+          "missing_skills": ["skill3", "skill4"],
+          "resources": [
+            {{"skill": "skill3", "resource": "https://example.com"}}
+          ]
+        }}
+
+        Resume text:
         {text}
         """
 
         response = model.generate_content(prompt)
 
-        return jsonify({"analysis": response.text})
+        print("🔥 Gemini raw response:")
+        print(response.text)  # debug output
+
+        raw_output = response.text.strip()
+
+        # --- Try parsing as JSON ---
+        import json, re
+        analysis = None
+        try:
+            analysis = json.loads(raw_output)
+        except:
+            match = re.search(r"\{.*\}", raw_output, re.S)
+            if match:
+                try:
+                    analysis = json.loads(match.group(0))
+                except:
+                    pass
+
+        # --- If parsing still fails, return raw output safely ---
+        if not analysis:
+            analysis = {
+                "detected_skills": [],
+                "missing_skills": [],
+                "resources": [],
+                "raw_output": raw_output
+            }
+
+        return jsonify(analysis)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        # Never crash — always return valid JSON
+        return jsonify({
+            "detected_skills": [],
+            "missing_skills": [],
+            "resources": [],
+            "error": str(e)
+        })
+
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
