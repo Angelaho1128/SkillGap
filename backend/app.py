@@ -7,6 +7,7 @@ import google.ai.generativelanguage as glm
 import json
 
 app = Flask(__name__)
+# Allow CORS for all origins, necessary for local development
 CORS(app)
 
 # Configure the Gemini API with the environment variable
@@ -65,28 +66,38 @@ def analyze_resume():
     print("✅ /analyze endpoint called")
     try:
         text = ""
+        job_field = ""
+        
+        # Check if the request contains a file
         if "resume" in request.files and request.files["resume"].filename:
             file = request.files["resume"]
             text = extract_text_from_pdf(file)
+            job_field = request.form.get("job_field", "")
+        # If no file, check if it's a JSON request
         else:
             data = request.get_json(silent=True)
             if data and "text" in data:
                 text = data["text"]
+                job_field = data.get("job_field", "")
 
         print("📄 Extracted resume text:")
         print(text[:500])
+        print("🎯 Target job field:", job_field)
 
         if not text.strip():
             return jsonify({
                 "detected_skills": [],
                 "missing_skills": [],
-                "resources": []
-            })
+                "resources": [],
+                "error": "No text could be extracted from the resume."
+            }), 400
 
-        # The prompt is now simpler because the schema handles the output format.
+        # The prompt is now more specific with the job field.
         prompt = f"""
         You are a career coach AI. Analyze the following resume text.
-        Based on the content, identify key skills, suggest a few missing skills, and provide a single resource URL for each missing skill.
+        The candidate is targeting the field: "{job_field}".
+        Based on the content, identify key skills, suggest a few missing skills important for this field,
+        and provide a single resource URL for each missing skill.
 
         Resume text:
         {text}
@@ -105,14 +116,12 @@ def analyze_resume():
         print("🔥 Gemini raw response:")
         print(raw_output)
 
-        # The response is guaranteed to be valid JSON, so no fragile parsing is needed.
         analysis = json.loads(raw_output)
 
         # The API returns a list, so we take the first item
         return jsonify(analysis[0])
 
     except Exception as e:
-        # Never crash — always return valid JSON with an error message
         print(f"❌ Exception occurred: {e}")
         return jsonify({
             "detected_skills": [],
