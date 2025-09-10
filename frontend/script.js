@@ -1,20 +1,36 @@
+function clearInput() {
+  document.getElementById("resumeFile").value = null;
+  document.getElementById("resumeInput").value = "";
+  document.getElementById("jobField").value = "";
+  document.getElementById("summaryText").textContent = 'Your analysis will appear here after you click "Analyze".';
+  document.getElementById("detectedList").innerHTML = '<li class="text-gray-400">No results yet.</li>';
+  document.getElementById("missingList").innerHTML = '<li class="text-gray-400">No results yet.</li>';
+  document.getElementById("resourcesList").innerHTML = '<li class="text-gray-400">No resources yet.</li>';
+}
+
 async function analyzeResume() {
   const resumeFile = document.getElementById("resumeFile").files[0];
   const resumeText = document.getElementById("resumeInput").value.trim();
-  const jobField = document.getElementById("jobField")
-    ? document.getElementById("jobField").value.trim()
-    : "";
-  const outputDiv = document.getElementById("results");
+  const jobField = document.getElementById("jobField") ? document.getElementById("jobField").value.trim() : "";
   const analyzeButton = document.getElementById("analyzeButton");
 
+  // UI elements
+  const summaryText = document.getElementById("summaryText");
+  const detectedList = document.getElementById("detectedList");
+  const missingList = document.getElementById("missingList");
+  const resourcesList = document.getElementById("resourcesList");
+
+  // Validate input
   if (!resumeFile && !resumeText) {
-    outputDiv.innerHTML =
-      '<p class="text-red-500 text-center">⚠️ Please upload a resume or paste text.</p>';
+    summaryText.innerHTML = '<span class="text-red-500 font-medium">⚠️ Please upload a resume or paste text.</span>';
     return;
   }
 
-  outputDiv.innerHTML =
-    '<p class="text-blue-500 text-center animate-pulse">⏳ Analyzing resume...</p>';
+  // Loading state
+  summaryText.innerHTML = '<span class="text-blue-500 animate-pulse">⏳ Analyzing resume...</span>';
+  detectedList.innerHTML = '';
+  missingList.innerHTML = '';
+  resourcesList.innerHTML = '';
   if (analyzeButton) {
     analyzeButton.disabled = true;
     analyzeButton.textContent = "Analyzing...";
@@ -24,7 +40,6 @@ async function analyzeResume() {
     let response;
 
     if (resumeFile) {
-      // 🔹 If PDF file uploaded
       const formData = new FormData();
       formData.append("resume", resumeFile);
       formData.append("job_field", jobField);
@@ -34,7 +49,6 @@ async function analyzeResume() {
         body: formData,
       });
     } else {
-      // 🔹 If text pasted
       response = await fetch("http://127.0.0.1:5000/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,43 +60,63 @@ async function analyzeResume() {
     }
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `Server returned ${response.status}`);
     }
 
     const data = await response.json();
-    console.log("✅ Backend returned:", data);
 
-    // --- Render results ---
-    let html = "";
+    // Update summary
+    const detectedCount = Array.isArray(data.detected_skills) ? data.detected_skills.length : 0;
+    const missingCount = Array.isArray(data.missing_skills) ? data.missing_skills.length : 0;
+    summaryText.innerHTML = `<span class="font-medium text-gray-700">${detectedCount} detected • ${missingCount} suggested gaps</span>
+      <div class="text-sm text-gray-500 mt-1">${jobField ? `Target: ${jobField}` : 'No target field specified'}</div>`;
+
+    // Fill detected skills
     if (data.detected_skills && data.detected_skills.length > 0) {
-      html += `<h3 class="text-xl font-semibold mt-6 mb-2 text-gray-700">✅ Detected Skills:</h3><ul class="list-disc list-inside space-y-1 text-gray-600">${data.detected_skills.map(
-        (s) => `<li>${s}</li>`
-      ).join("")}</ul>`;
+      detectedList.innerHTML = data.detected_skills.map(s => `<li>${escapeHtml(s)}</li>`).join('');
+    } else {
+      detectedList.innerHTML = '<li class="text-gray-400">No detected skills.</li>';
     }
+
+    // Fill missing skills
     if (data.missing_skills && data.missing_skills.length > 0) {
-      html += `<h3 class="text-xl font-semibold mt-6 mb-2 text-gray-700">💡 Missing Skills Suggestions:</h3><ul class="list-disc list-inside space-y-1 text-gray-600">${data.missing_skills.map(
-        (s) => `<li>${s}</li>`
-      ).join("")}</ul>`;
+      missingList.innerHTML = data.missing_skills.map(s => `<li>${escapeHtml(s)}</li>`).join('');
+    } else {
+      missingList.innerHTML = '<li class="text-gray-400">No missing skills suggested.</li>';
     }
+
+    // Fill resources
     if (data.resources && data.resources.length > 0) {
-      html += `<h3 class="text-xl font-semibold mt-6 mb-2 text-gray-700">📚 Learning Resources:</h3><ul class="list-disc list-inside space-y-1 text-blue-600">${data.resources.map(
-        (r) =>
-          `<li>${r.skill}: <a href="${r.resource}" target="_blank" class="hover:underline">${r.resource}</a></li>`
-      ).join("")}</ul>`;
+      resourcesList.innerHTML = data.resources.map(r => {
+        const skill = escapeHtml(r.skill || '');
+        const link = escapeHtml(r.resource || '');
+        return `<li><strong>${skill}</strong>: <a href="${link}" target="_blank" class="text-blue-600 hover:underline">${link}</a></li>`;
+      }).join('');
+    } else {
+      resourcesList.innerHTML = '<li class="text-gray-400">No resources provided.</li>';
     }
-    if (!html) {
-      html =
-        '<p class="text-gray-500 text-center">No relevant skills were detected in the resume text.</p>';
-    }
-    outputDiv.innerHTML = html;
+
   } catch (err) {
     console.error("❌ Error analyzing resume:", err);
-    outputDiv.innerHTML = `<p class="text-red-500 text-center">❌ Error analyzing resume: ${err.message}</p>`;
+    summaryText.innerHTML = `<span class="text-red-500 font-medium">❌ Error analyzing resume: ${escapeHtml(err.message || String(err))}</span>`;
+    detectedList.innerHTML = '<li class="text-gray-400">—</li>';
+    missingList.innerHTML = '<li class="text-gray-400">—</li>';
+    resourcesList.innerHTML = '<li class="text-gray-400">—</li>';
   } finally {
     if (analyzeButton) {
       analyzeButton.disabled = false;
       analyzeButton.textContent = "Analyze Resume";
     }
   }
+}
+
+// small helper to avoid injecting raw HTML (basic escaping)
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
 }

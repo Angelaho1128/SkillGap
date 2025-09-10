@@ -5,17 +5,17 @@
   <title>Skill Gap Matcher (AI)</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-  <div class="container bg-white p-8 rounded-2xl shadow-lg border border-gray-200 max-w-lg w-full max-h-[90vh] overflow-y-auto text-center">
-    <h1 class="text-3xl font-bold mb-4 text-gray-800">SkillGap Matcher</h1>
-    <p class="text-gray-600 mb-6">Upload your resume (PDF) or paste your text below to get AI-powered feedback.</p>
+<body class="flex items-center justify-center min-h-screen bg-gray-100 p-6">
+  <div class="container bg-white p-8 rounded-2xl shadow-lg border border-gray-200 max-w-4xl w-full max-h-[90vh] overflow-y-auto text-center">
+    <h1 class="text-3xl font-bold mb-3 text-gray-800">SkillGap Matcher</h1>
+    <p class="text-gray-600 mb-6">Upload your resume (PDF) or paste your text below to get AI-powered, field-specific feedback.</p>
 
     <!-- Job field -->
     <div class="mb-4 text-left">
       <label for="jobField" class="block text-sm font-medium text-gray-700 mb-1">
-        Target Job / Field
+        🎯 Target Job / Field
       </label>
-      <input type="text" id="jobField" placeholder="e.g., Web Development, Pharmacy..."
+      <input type="text" id="jobField" placeholder="e.g., Web Development, Data Science, Marketing..."
         class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-200 ease-in-out">
     </div>
 
@@ -40,10 +40,40 @@
       Analyze Resume
     </button>
 
-    <!-- Results -->
-    <div id="results" class="mt-8 text-left">
-      <p class="text-gray-500 text-center">Your analysis will appear here after you click "Analyze".</p>
+    <!-- Results area (static card layout) -->
+    <div id="results" class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+      <!-- Summary card -->
+      <div id="summaryCard" class="result-card bg-white border rounded-lg p-4 shadow-sm">
+        <h3 class="text-lg font-semibold mb-2">🔎 Summary</h3>
+        <p id="summaryText" class="text-gray-600">No analysis yet — upload or paste a resume and click Analyze.</p>
+      </div>
+
+      <!-- Detected skills card -->
+      <div id="detectedCard" class="result-card bg-white border rounded-lg p-4 shadow-sm">
+        <h3 class="text-lg font-semibold mb-2">✅ Detected Skills</h3>
+        <ul id="detectedList" class="list-disc list-inside text-gray-700 space-y-1 min-h-[120px]">
+          <li class="text-gray-400">No results yet.</li>
+        </ul>
+      </div>
+
+      <!-- Missing skills + resources card (stacked inside column on narrow screens) -->
+      <div class="flex flex-col gap-4">
+        <div id="missingCard" class="result-card bg-white border rounded-lg p-4 shadow-sm">
+          <h3 class="text-lg font-semibold mb-2">💡 Missing Skills</h3>
+          <ul id="missingList" class="list-disc list-inside text-gray-700 space-y-1 min-h-[70px]">
+            <li class="text-gray-400">No results yet.</li>
+          </ul>
+        </div>
+
+        <div id="resourcesCard" class="result-card bg-white border rounded-lg p-4 shadow-sm">
+          <h3 class="text-lg font-semibold mb-2">📚 Resources</h3>
+          <ul id="resourcesList" class="list-inside text-blue-600 space-y-2 min-h-[70px]">
+            <li class="text-gray-400">No resources yet.</li>
+          </ul>
+        </div>
+      </div>
     </div>
+
   </div>
 
   <script src="script.js"></script>
