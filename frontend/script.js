@@ -145,17 +145,27 @@ async function analyzeResume() {
     renderResults(data);
 
   } catch (err) {
-    console.error("Error analyzing resume:", err);
-    // show error right below button
-    const errorEl = document.createElement("p");
-    errorEl.id = "errorMessage";
-    errorEl.className = "text-red-500 text-center mt-2";
-    errorEl.textContent = `Error analyzing resume: ${err.message || String(err)}`;
-    analyzeButton.insertAdjacentElement("afterend", errorEl);
-    // keep results cleared or show placeholders
-    document.getElementById("detectedList").innerHTML = '<li class="text-gray-400">—</li>';
-    document.getElementById("missingList").innerHTML = '<li class="text-gray-400">—</li>';
-  } finally {
+  console.error("Error analyzing resume:", err);
+
+  // Remove any existing error message
+  const oldError = document.getElementById("errorMessage");
+  if (oldError) oldError.remove();
+
+  // Create new plain-text error message
+  const errorEl = document.createElement("p");
+  errorEl.id = "errorMessage";
+  errorEl.className = "text-red-500 text-center mt-2";
+  errorEl.textContent = "Error analyzing resume: " + (err.message || String(err));
+
+  analyzeButton.insertAdjacentElement("afterend", errorEl);
+
+  // Reset results placeholders
+  document.getElementById("detectedList").innerHTML =
+    '<li class="text-gray-400">—</li>';
+  document.getElementById("missingList").innerHTML =
+    '<li class="text-gray-400">—</li>';
+}
+ finally {
     analyzeButton.disabled = false;
     analyzeButton.textContent = originalText;
   }

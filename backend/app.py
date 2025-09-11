@@ -14,7 +14,7 @@ CORS(app)
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Use a model that supports structured output
-model = genai.GenerativeModel("gemini-1.5-flash-latest")
+model = genai.GenerativeModel("gemini-1.5-pro")
 
 # Define the schema for the desired JSON output
 response_schema = glm.Schema(
