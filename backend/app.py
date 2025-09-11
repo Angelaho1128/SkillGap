@@ -63,7 +63,7 @@ def extract_text_from_pdf(file):
 
 @app.route("/analyze", methods=["POST"])
 def analyze_resume():
-    print("✅ /analyze endpoint called")
+    print("/analyze endpoint called")
     try:
         text = ""
         job_field = ""
@@ -80,9 +80,9 @@ def analyze_resume():
                 text = data["text"]
                 job_field = data.get("job_field", "")
 
-        print("📄 Extracted resume text:")
+        print("Extracted resume text:")
         print(text[:500])
-        print("🎯 Target job field:", job_field)
+        print("Target job field:", job_field)
 
         if not text.strip():
             return jsonify({
@@ -113,7 +113,7 @@ def analyze_resume():
         )
 
         raw_output = response.text.strip()
-        print("🔥 Gemini raw response:")
+        print("Gemini raw response:")
         print(raw_output)
 
         analysis = json.loads(raw_output)
@@ -122,7 +122,6 @@ def analyze_resume():
         return jsonify(analysis[0])
 
     except Exception as e:
-        print(f"❌ Exception occurred: {e}")
         return jsonify({
             "detected_skills": [],
             "missing_skills": [],

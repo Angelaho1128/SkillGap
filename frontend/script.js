@@ -50,7 +50,7 @@ function renderResults(data) {
       // Build resource HTML (single link under the skill)
       const resourceHtml = resource && resource.resource
         ? `<div class="ml-4 text-sm text-blue-600 break-words mt-1">
-             🔗 <a href="${escapeHtml(resource.resource)}" target="_blank" class="hover:underline">
+             <a href="${escapeHtml(resource.resource)}" target="_blank" class="hover:underline">
                ${escapeHtml(shortenUrl(resource.resource))}
              </a>
            </div>`
@@ -101,7 +101,7 @@ async function analyzeResume() {
     const err = document.createElement("p");
     err.id = "errorMessage";
     err.className = "text-red-500 text-center mt-2";
-    err.textContent = "⚠️ Please upload a resume or paste text.";
+    err.textContent = "Please upload a resume or paste text.";
     analyzeButton.insertAdjacentElement("afterend", err);
     return;
   }
@@ -109,7 +109,7 @@ async function analyzeResume() {
   // set loading state on button only
   const originalText = analyzeButton.textContent;
   analyzeButton.disabled = true;
-  analyzeButton.textContent = "⏳ Analyzing resume...";
+  analyzeButton.textContent = "Analyzing resume...";
 
   // clear previous results while keeping cards present
   document.getElementById("detectedList").innerHTML = "";
@@ -145,12 +145,12 @@ async function analyzeResume() {
     renderResults(data);
 
   } catch (err) {
-    console.error("❌ Error analyzing resume:", err);
+    console.error("Error analyzing resume:", err);
     // show error right below button
     const errorEl = document.createElement("p");
     errorEl.id = "errorMessage";
     errorEl.className = "text-red-500 text-center mt-2";
-    errorEl.textContent = `❌ Error analyzing resume: ${err.message || String(err)}`;
+    errorEl.textContent = `Error analyzing resume: ${err.message || String(err)}`;
     analyzeButton.insertAdjacentElement("afterend", errorEl);
     // keep results cleared or show placeholders
     document.getElementById("detectedList").innerHTML = '<li class="text-gray-400">—</li>';
