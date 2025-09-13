@@ -92,15 +92,41 @@ def analyze_resume():
                 "error": "No text could be extracted from the resume."
             }), 400
 
-        # The prompt is now more specific with the job field.
         prompt = f"""
-        You are a career coach AI. Analyze the following resume text.
-        The candidate is targeting the field: "{job_field}".
+        You are a resume analysis AI. Carefully analyze the resume text below and the target job field.
+        The user is targeting the field: "{job_field}".
         Based on the content, identify key skills, suggest a few missing skills important for this field,
-        and provide a single resource URL for each missing skill.
+        and provide a single resource URL (a link, not just names of the resources) for each missing skill.
+
+        Tasks (strict):
+        1) Extract SKILLS EXPLICITLY listed in the resume (e.g., from a "Skills" section) and Infer ADDITIONAL skills from the candidate's EXPERIENCES (work, projects, volunteering, coursework), and return them as "detected_skills".
+        - Example: "Built a web app using React and Node" => infer "React", "Node.js", "Web Development".
+        - Example: "Led a 5-person team" => infer "Leadership", "Team Management".
+        2) Based on the provided target job field: list "missing_skills" that are commonly expected for that field but are NOT present in detected_skills.
+        - Do NOT include any skill in missing_skills if it appears in detected_skills (explicit OR inferred).
+        3) For each missing skill, provide one learning resource URL (must be a valid URL) in "resources" with keys: skill, resource.
+        4) Return ONLY valid JSON that exactly follows this object structure:
+        {{
+        "detected_skills": ["..."],
+        "missing_skills": ["..."],
+        "resources": ["..."]
+        }}
+        5) If no skills are detected, return an empty list for detected_skills.
+        6) Google search is allowed to find resources, but do NOT include URLs of Google search results pages.
+
+        Your responses do not have to be a specific number of characters long.
 
         Resume text:
         {text}
+
+        Target job field:
+        {job_field}
+
+        Notes:
+        - Be concise and avoid commentary.
+        - Prefer well-known teaching resources (course pages, docs, official tutorials) when possible.
+        - Do not include URLs of Google search results pages.
+        - Return JSON only.
         """
 
         # Call the model with the structured response schema
@@ -118,7 +144,6 @@ def analyze_resume():
 
         analysis = json.loads(raw_output)
 
-        # The API returns a list, so we take the first item
         return jsonify(analysis[0])
 
     except Exception as e:
