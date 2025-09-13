@@ -139,7 +139,6 @@ def analyze_resume():
         print("Gemini raw response:")
         print(raw_output)
 
-        # Try parsing JSON safely
         try:
             analysis = json.loads(raw_output)
         except Exception:
