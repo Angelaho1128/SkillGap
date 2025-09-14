@@ -9,12 +9,12 @@ SkillGap is a web app that helps users identify skills from their resumes, compa
 - Infer additional skills from experiences and projects.  
 - Compare detected skills against target career roles.  
 - Provide resources for missing skills.  
-- Clean and responsive UI built with React + Tailwind CSS.  
+- Clean and responsive UI built with Tailwind CSS.  
 
 ---
 
 ## Tech Stack  
-- **Frontend:** React, Tailwind CSS  
+- **Frontend:** Tailwind CSS  
 - **Backend:** Flask (Python)  
 - **AI:** Google Gemini API (for skill extraction & recommendations)  
 - **PDF Handling:** PyPDF2  
