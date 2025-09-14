@@ -73,8 +73,8 @@ setx GEMINI_API_KEY "your_api_key_here"
 4. View extracted skills, missing skills, and recommended resources.
 
 ### Requirements
-Python 3.9+ \n
-Flask \n
-Flask-CORS \n
-PyPDF2 \n
-google-generativeai
+- Python 3.9+
+- Flask
+- Flask-CORS
+- PyPDF2 
+- google-generativeai
